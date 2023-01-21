@@ -1,0 +1,21 @@
+#!/bin/bash
+
+#Define the name of the SSH Pod
+sshpod="sshpod"
+
+#Getting the IP Address of the Node
+nodeIP=$(kubectl get node $1 -o wide | awk '{print $6}' | tail -n +2)
+echo "Connecting to $nodeIP"
+echo "Creating SSH Host Pod"
+kubectl run $sshpod --image=nginx
+
+sleep 5
+#kubectl exec -it sshpod -- apt update
+#kubectl exec -it sshpod -- apt install ssh -y
+kubectl cp ~/.ssh/id_rsa sshpod:/tmp
+kubectl exec -it sshpod -- ssh -i /tmp/id_rsa azureuser@$nodeIP
+echo "Done"
+
+
+echo "kubectl ssh_nodeshell <node-name>"
+
