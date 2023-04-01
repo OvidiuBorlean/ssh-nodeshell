@@ -12,14 +12,24 @@ else
   nodeIP=$(kubectl get node $1 -o wide | awk '{print $6}' | tail -n +2)
   echo "Connecting to $nodeIP"
   echo "Creating SSH Host Pod"
-  kubectl run $sshpod --image=$pod_image
-  echo "Waiting for Pod to be deployed"
-  sleep 5
-  kubectl exec -it $sshpod -- apt update
-  echo "Install OpenSSH"
-  kubectl exec -it $sshpod -- apt install ssh -y
-  kubectl cp $ssh_key $sshpod:/tmp
-  kubectl exec -it $sshpod -- ssh -o "StrictHostKeyChecking no" -i /tmp/id_rsa azureuser@$nodeIP
-  echo "Done"
+  kubectl run $sshpod --image=$pod_image --overrides='{"spec": { "nodeSelector": {"kubernetes.io/os": "linux"}}}'
+  while true
+  do
+    kubectl get pod $sshpod | grep Running > /dev/null
+  if [ $? !=  0 ]
+  then
+     echo "Still working..."
+     sleep 5
+  else
+     kubectl exec -it $sshpod -- apt update
+     echo "Install OpenSSH"
+     kubectl exec -it $sshpod -- apt install ssh -y
+     kubectl cp $ssh_key $sshpod:/tmp
+     kubectl exec -it $sshpod -- ssh -o "StrictHostKeyChecking no" -i /tmp/id_rsa azureuser@$nodeIP
+     echo "Done"
+     kubectl delete pod $sshpod
+     exit
+  fi
+  done
 fi
 #echo "kubectl ssh_nodeshell <node-name>"
